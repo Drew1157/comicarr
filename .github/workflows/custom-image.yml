@@ -1,0 +1,47 @@
+name: Custom Franchise/MainHero Image
+
+on:
+  push:
+    branches:
+      - feature/franchise-mainhero
+  workflow_dispatch:
+
+concurrency: custom-image-${{ github.ref }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push custom image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/drew1157/comicarr:franchise-mainhero
+            ghcr.io/drew1157/comicarr:franchise-mainhero-${{ github.sha }}
+          build-args: |
+            COMICARR_BUILD_ID=franchise-mainhero
+            COMICARR_BUILD_COMMIT=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
