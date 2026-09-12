@@ -83,7 +83,7 @@ def _parse_action(text):
     candidate = lines[0].strip()
     try:
         payload = json.loads(candidate)
-    except (TypeError, ValueError, json.JSONDecodeError):
+    except (TypeError, ValueError):
         return None, text
     if not isinstance(payload, dict) or payload.get("action") != "organize_series":
         return None, text
@@ -168,17 +168,22 @@ confirms the previously previewed move. The application will enforce confirmatio
         combined = "".join(pending_text).strip()
         action, remainder = _parse_action(combined)
         if not action:
+            done_events = []
             for event in passthrough:
-                yield event
+                if event.get("type") == "done":
+                    done_events.append(event)
+                else:
+                    yield event
             if combined:
                 yield {"type": "text", "content": combined}
+            for event in done_events:
+                yield event
             return
 
         # Query-style result events are irrelevant for a write action, but usage is retained.
         for event in passthrough:
-            if event.get("type") in {"usage", "done"}:
-                if event.get("type") == "usage":
-                    yield event
+            if event.get("type") == "usage":
+                yield event
 
         series_name = action.get("series")
         year = action.get("year")
